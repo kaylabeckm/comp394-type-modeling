@@ -78,6 +78,7 @@ class MethodCall(Expression):
         primitives = [Type.int, Type.boolean, Type.double]
         objType = self.receiver.static_type()
         passedArgTypes = []
+
         if objType in primitives:           #cant call methods on primitives
             raise JavaTypeError("Type {0} does not have methods".format(
                 objType.name
@@ -90,6 +91,7 @@ class MethodCall(Expression):
                 objType.name,
                 self.method_name
             ))
+
         if len(self.args) == len(method.argument_types):        #if you passed enough arguments for the method
             pass
         else:
@@ -97,12 +99,14 @@ class MethodCall(Expression):
                                 objType.name + "." + method.name+ "()",
                                 len(method.argument_types),
                                 len(self.args)))
+
+        for e in self.args:
+            passedArgTypes.append(e.static_type())
         for i in range(0,len(self.args)):                   # if you passed args of the correct type for the method
-            passedArgTypes += [self.args[i].static_type()]
             if passedArgTypes[i] == method.argument_types[i]:
-                pass
+                self.args[i].check_types()
             elif method.argument_types[i] in passedArgTypes[i].direct_supertypes:
-                pass
+                self.args[i].check_types()
             else:
                 raise JavaTypeError("{0} expects arguments of type {1}, but got {2}".format(
                                 objType.name + "." + method.name + "()",
@@ -141,12 +145,13 @@ class ConstructorCall(Expression):
                                 len(self.args)))
 
         # make sure you passed arguments with the expected types (or supertypes)
+        for e in self.args:
+            passedArgTypes.append(e.static_type())
         for i in range(0,len(self.args)):
-            passedArgTypes += [self.args[i].static_type()]
             if passedArgTypes[i] == expectedArgTypes[i]:
-                pass
+                self.args[i].check_types()
             elif expectedArgTypes[i] in passedArgTypes[i].direct_supertypes:
-                pass
+                self.args[i].check_types()
             else:
                 raise JavaTypeError("{0} expects arguments of type {1}, but got {2}".format(
                                 self.instantiated_type.name + " constructor",
