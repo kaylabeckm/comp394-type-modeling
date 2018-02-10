@@ -21,6 +21,7 @@ class Expression(object):
         Validates the structure of this expression, checking for any logical inconsistencies in the
         child nodes and the operation this expression applies to them.
         """
+
         raise NotImplementedError(type(self).__name__ + " must implement check_types()")
 
 
@@ -31,6 +32,12 @@ class Variable(Expression):
         self.name = name                    #: The name of the variable
         self.declared_type = declared_type  #: The declared type of the variable (Type)
 
+    def static_type(self):
+        return self.declared_type
+
+    def check_types(self):
+        pass
+
 
 class Literal(Expression):
     """ A literal value entered in the code, e.g. `5` in the expression `x + 5`.
@@ -39,10 +46,18 @@ class Literal(Expression):
         self.value = value  #: The literal value, as a string
         self.type = type    #: The type of the literal (Type)
 
+    def static_type(self):
+        return self.type
+
+    def check_types(self):
+        pass
 
 class NullLiteral(Literal):
     def __init__(self):
         super().__init__("null", Type.null)
+
+    def static_type(self):
+        return Type.null
 
 
 class MethodCall(Expression):
@@ -50,10 +65,49 @@ class MethodCall(Expression):
     A Java method invocation, i.e. `foo.bar(0, 1, 2)`.
     """
     def __init__(self, receiver, method_name, *args):
-        self.receiver = receiver
         self.receiver = receiver        #: The object whose method we are calling (Expression)
         self.method_name = method_name  #: The name of the method to call (String)
         self.args = args                #: The method arguments (list of Expressions)
+
+    def static_type(self):
+        objType = self.receiver.static_type()
+        method = objType.method_named(self.method_name)
+        return method.return_type
+
+    def check_types(self):
+        primitives = [Type.int, Type.boolean, Type.double]
+        objType = self.receiver.static_type()
+        passedArgTypes = []
+        if objType in primitives:           #cant call methods on primitives
+            raise JavaTypeError("Type {0} does not have methods".format(
+                objType.name
+            ))
+        if objType.method_named(self.method_name):          #if the object has the correct method
+            method = objType.method_named(self.method_name)
+            pass
+        else:
+            raise JavaTypeError("{0} has no method named {1}".format(
+                objType.name,
+                self.method_name
+            ))
+        if len(self.args) == len(method.argument_types):        #if you passed enough arguments for the method
+            pass
+        else:
+            raise JavaTypeError("Wrong number of arguments for {0}: expected {1}, got {2}".format(
+                                objType.name + "." + method.name+ "()",
+                                len(method.argument_types),
+                                len(self.args)))
+        for i in range(0,len(self.args)):                   # if you passed args of the correct type for the method
+            passedArgTypes += [self.args[i].static_type()]
+            if passedArgTypes[i] == method.argument_types[i]:
+                pass
+            elif method.argument_types[i] in passedArgTypes[i].direct_supertypes:
+                pass
+            else:
+                raise JavaTypeError("{0} expects arguments of type {1}, but got {2}".format(
+                                objType.name + "." + method.name + "()",
+                                names(method.argument_types),
+                                names(passedArgTypes)))
 
 
 class ConstructorCall(Expression):
@@ -63,6 +117,41 @@ class ConstructorCall(Expression):
     def __init__(self, instantiated_type, *args):
         self.instantiated_type = instantiated_type  #: The type to instantiate (Type)
         self.args = args                            #: Constructor arguments (list of Expressions)
+
+    def static_type(self):
+        return self.instantiated_type
+
+    def check_types(self):
+        # can't instantiate primitives
+        primitives = [Type.int, Type.boolean, Type.double]
+        if self.instantiated_type in primitives:
+            raise JavaTypeError("Type {0} is not instantiable".format(
+                self.instantiated_type.name
+            ))
+
+        passedArgTypes = []     #setup a list for the types of passed arguments
+        expectedArgTypes = self.instantiated_type.constructor.argument_types
+        # make sure you passed the expected number of arguments
+        if len(self.args) == len(expectedArgTypes):
+            pass
+        else:
+            raise JavaTypeError("Wrong number of arguments for {0}: expected {1}, got {2}".format(
+                                self.instantiated_type.name + " constructor",
+                                len(expectedArgTypes),
+                                len(self.args)))
+
+        # make sure you passed arguments with the expected types (or supertypes)
+        for i in range(0,len(self.args)):
+            passedArgTypes += [self.args[i].static_type()]
+            if passedArgTypes[i] == expectedArgTypes[i]:
+                pass
+            elif expectedArgTypes[i] in passedArgTypes[i].direct_supertypes:
+                pass
+            else:
+                raise JavaTypeError("{0} expects arguments of type {1}, but got {2}".format(
+                                self.instantiated_type.name + " constructor",
+                                names(expectedArgTypes),
+                                names(passedArgTypes)))
 
 
 class JavaTypeError(Exception):

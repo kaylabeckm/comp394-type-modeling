@@ -12,7 +12,16 @@ class Type(object):
     def is_subtype_of(self, other):
         """ True if this type can be used where the other type is expected.
         """
-        return True  # TODO: implement
+        if self.name == other.name:
+            return True
+        for x in self.direct_supertypes:
+            for y in x.direct_supertypes:
+                if y.name == other.name:
+                    return True
+            if x.name == other.name:
+                return True
+
+        return False
 
     def is_supertype_of(self, other):
         """ Convenience counterpart to is_subtype_of().
