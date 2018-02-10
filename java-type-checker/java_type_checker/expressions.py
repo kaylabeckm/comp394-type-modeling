@@ -60,6 +60,7 @@ class NullLiteral(Literal):
         return Type.null
 
 
+
 class MethodCall(Expression):
     """
     A Java method invocation, i.e. `foo.bar(0, 1, 2)`.
@@ -83,6 +84,7 @@ class MethodCall(Expression):
             raise JavaTypeError("Type {0} does not have methods".format(
                 objType.name
             ))
+
         if objType.method_named(self.method_name):          #if the object has the correct method
             method = objType.method_named(self.method_name)
             pass
@@ -105,7 +107,7 @@ class MethodCall(Expression):
         for i in range(0,len(self.args)):                   # if you passed args of the correct type for the method
             if passedArgTypes[i] == method.argument_types[i]:
                 self.args[i].check_types()
-            elif method.argument_types[i] in passedArgTypes[i].direct_supertypes:
+            elif method.argument_types[i] in passedArgTypes[i].direct_supertypes or passedArgTypes[i] == Type.null:
                 self.args[i].check_types()
             else:
                 raise JavaTypeError("{0} expects arguments of type {1}, but got {2}".format(
@@ -132,6 +134,8 @@ class ConstructorCall(Expression):
             raise JavaTypeError("Type {0} is not instantiable".format(
                 self.instantiated_type.name
             ))
+        if self.instantiated_type == Type.null:
+            raise JavaTypeError("Type null is not instantiable")
 
         passedArgTypes = []     #setup a list for the types of passed arguments
         expectedArgTypes = self.instantiated_type.constructor.argument_types
@@ -152,6 +156,8 @@ class ConstructorCall(Expression):
                 self.args[i].check_types()
             elif expectedArgTypes[i] in passedArgTypes[i].direct_supertypes:
                 self.args[i].check_types()
+            elif passedArgTypes[i] == Type.null and not expectedArgTypes[i] in primitives:
+                pass
             else:
                 raise JavaTypeError("{0} expects arguments of type {1}, but got {2}".format(
                                 self.instantiated_type.name + " constructor",

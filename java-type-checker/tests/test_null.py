@@ -84,7 +84,7 @@ class TestNull(TypeTest):
         """
         Equivalent Java:
 
-            GraphicsGroup group;
+             GraphicsGroup group;
             Window window;
 
             group.add(
