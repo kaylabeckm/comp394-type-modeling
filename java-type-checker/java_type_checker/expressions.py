@@ -105,10 +105,11 @@ class MethodCall(Expression):
         for e in self.args:
             passedArgTypes.append(e.static_type())
         for i in range(0,len(self.args)):                   # if you passed args of the correct type for the method
+            self.args[i].check_types()
             if passedArgTypes[i] == method.argument_types[i]:
-                self.args[i].check_types()
+                pass
             elif method.argument_types[i] in passedArgTypes[i].direct_supertypes or passedArgTypes[i] == Type.null:
-                self.args[i].check_types()
+                pass
             else:
                 raise JavaTypeError("{0} expects arguments of type {1}, but got {2}".format(
                                 objType.name + "." + method.name + "()",
@@ -152,10 +153,11 @@ class ConstructorCall(Expression):
         for e in self.args:
             passedArgTypes.append(e.static_type())
         for i in range(0,len(self.args)):
+            self.args[i].check_types()
             if passedArgTypes[i] == expectedArgTypes[i]:
-                self.args[i].check_types()
+                pass
             elif expectedArgTypes[i] in passedArgTypes[i].direct_supertypes:
-                self.args[i].check_types()
+                pass
             elif passedArgTypes[i] == Type.null and not expectedArgTypes[i] in primitives:
                 pass
             else:
